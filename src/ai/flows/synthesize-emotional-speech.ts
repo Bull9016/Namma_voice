@@ -10,11 +10,13 @@ interface SynthesizeEmotionalSpeechResult {
   audioDataUri: string;
 }
 
+const BACKEND_URL = 'https://nammavoicebackend.onrender.com';
+
 export async function synthesizeEmotionalSpeech(params: SynthesizeEmotionalSpeechParams): Promise<SynthesizeEmotionalSpeechResult> {
   const { text, language } = params;
 
   try {
-    const response = await axios.post('http://localhost:10000/synthesize', {
+    const response = await axios.post(`${BACKEND_URL}/synthesize`, {
       text,
       lang: language,
       response_type: 'base64',
