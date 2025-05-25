@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: bash -c "apt-get update && apt-get install -y libespeak1 && python server.py"
+    startCommand: bash -c "sudo apt-get update && apt-get install -y libespeak1 && python server.py"
     envVars:
       - key: PORT
         fromDatabase: true

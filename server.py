@@ -4,17 +4,17 @@ import base64
 import io
 import os
 import logging
-import pyttsx3
-import tempfile
+import torch
+from TTS.api import TTS
 
 app = Flask(__name__)
 CORS(app)
 
 logging.basicConfig(level=logging.DEBUG)
 
-# Initialize pyttsx3 engine
-engine = pyttsx3.init()
-engine.setProperty('rate', 150)  # Set speech rate
+# Initialize TTS model (using a small pre-trained model for demonstration)
+tts_model_name = "tts_models/en/ljspeech/tacotron2-DDC"
+tts = TTS(tts_model_name)
 
 # Simple in-memory cache for synthesized audio
 synthesis_cache = {}
@@ -26,22 +26,18 @@ def synthesize_text_to_speech(text, lang):
         return synthesis_cache[cache_key]
 
     try:
-        # Use pyttsx3 to synthesize speech to a temporary WAV file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmpfile:
-            temp_filename = tmpfile.name
+        # Synthesize speech to numpy array and sample rate
+        wav = tts.tts(text)
+        sample_rate = tts.synthesizer.output_sample_rate
 
-        engine.save_to_file(text, temp_filename)
-        engine.runAndWait()
+        # Convert numpy array to bytes in WAV format
+        import soundfile as sf
+        audio_buffer = io.BytesIO()
+        sf.write(audio_buffer, wav, sample_rate, format='WAV')
+        audio_bytes = audio_buffer.getvalue()
 
-        # Read the WAV file and encode to base64
-        with open(temp_filename, 'rb') as f:
-            audio_data = f.read()
-        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-
+        audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
         synthesis_cache[cache_key] = audio_base64
-
-        # Clean up temp file
-        os.remove(temp_filename)
 
         app.logger.debug("Successfully synthesized audio to base64")
         return audio_base64
