@@ -6,12 +6,44 @@ import io
 import traceback
 import os
 import logging
+import time
 
 app = Flask(__name__)
 CORS(app)
 
 # Configure logging to show detailed error info on CLI
 logging.basicConfig(level=logging.DEBUG)
+
+# Simple in-memory cache for synthesized audio
+synthesis_cache = {}
+
+def synthesize_text_to_speech(text, lang):
+    cache_key = f"{lang}:{text}"
+    if cache_key in synthesis_cache:
+        app.logger.debug("Cache hit for synthesis")
+        return synthesis_cache[cache_key]
+
+    max_retries = 3
+    backoff_factor = 2
+    delay = 1  # initial delay in seconds
+
+    for attempt in range(max_retries):
+        try:
+            tts = gTTS(text=text, lang=lang)
+            audio_fp = io.BytesIO()
+            tts.write_to_fp(audio_fp)
+            audio_fp.seek(0)
+            audio_base64 = base64.b64encode(audio_fp.read()).decode('utf-8')
+            synthesis_cache[cache_key] = audio_base64
+            app.logger.debug("Successfully synthesized audio to base64")
+            return audio_base64
+        except Exception as e:
+            app.logger.error(f"Synthesis attempt {attempt+1} failed: {e}", exc_info=True)
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+                delay *= backoff_factor
+            else:
+                raise
 
 @app.route('/synthesize', methods=['POST'])
 def synthesize():
@@ -26,14 +58,9 @@ def synthesize():
             app.logger.error("Missing 'text' parameter in request")
             return jsonify({'error': 'Text parameter is required'}), 400
 
-        tts = gTTS(text=text, lang=lang)
-        audio_fp = io.BytesIO()
-        tts.write_to_fp(audio_fp)
-        audio_fp.seek(0)
+        audio_base64 = synthesize_text_to_speech(text, lang)
 
         if response_type == 'base64':
-            audio_base64 = base64.b64encode(audio_fp.read()).decode('utf-8')
-            app.logger.debug("Successfully synthesized audio to base64")
             return jsonify({'audio_base64': f'data:audio/mp3;base64,{audio_base64}'})
         else:
             app.logger.error(f"Unsupported response_type: {response_type}")
