@@ -4,17 +4,15 @@ import base64
 import io
 import os
 import logging
-import torch
-from TTS.api import TTS
+from larynx import TTS
 
 app = Flask(__name__)
 CORS(app)
 
 logging.basicConfig(level=logging.DEBUG)
 
-# Initialize Coqui TTS model
-tts_model_name = "tts_models/en/ljspeech/glow-tts"  # lighter model
-tts = TTS(tts_model_name)
+# Initialize Larynx TTS model
+tts = TTS()
 
 # Simple in-memory cache for synthesized audio
 synthesis_cache = {}
@@ -27,7 +25,7 @@ def synthesize_text_to_speech(text, lang):
 
     try:
         wav = tts.tts(text)
-        sample_rate = tts.synthesizer.output_sample_rate
+        sample_rate = tts.sample_rate
 
         import soundfile as sf
         audio_buffer = io.BytesIO()
