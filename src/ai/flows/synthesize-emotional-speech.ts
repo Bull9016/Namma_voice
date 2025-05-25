@@ -15,7 +15,11 @@ const SynthesizeEmotionalSpeechOutputSchema = z.object({
 });
 export type SynthesizeEmotionalSpeechOutput = z.infer<typeof SynthesizeEmotionalSpeechOutputSchema>;
 
+<<<<<<< HEAD
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+=======
+const BACKEND_URL = process.env.BACKEND_URL || 'https://namma-voice-1.onrender.com';
+>>>>>>> 2124eddb887f775b0f4cf58fc40a83ba65b8c322
 
 export async function synthesizeEmotionalSpeech(input: SynthesizeEmotionalSpeechInput): Promise<SynthesizeEmotionalSpeechOutput> {
   const { text, language } = input;

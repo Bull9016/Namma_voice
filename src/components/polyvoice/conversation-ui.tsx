@@ -183,8 +183,9 @@ export function ConversationUI() {
         }
       } else {
         setProcessingStep('translating');
+        let translationResult;
         try {
-          const translationResult = await translateRealTime({
+          translationResult = await translateRealTime({
             text: transcriptionResult.transcription,
             sourceLanguage: actualSourceLanguage,
             targetLanguage: actualTargetLanguage,
