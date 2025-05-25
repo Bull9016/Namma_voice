@@ -1,12 +1,10 @@
 services:
   - type: web
-    name: nammavoice-backend
+    name: nammavoicebackend
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python server.py
+    startCommand: bash -c "apt-get update && apt-get install -y libespeak1 && python server.py"
     envVars:
-      - key: FLASK_ENV
-        value: development
       - key: PORT
-        value: "10000"
+        fromDatabase: true
