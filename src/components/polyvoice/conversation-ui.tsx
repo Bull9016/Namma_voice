@@ -165,45 +165,64 @@ export function ConversationUI() {
         toast({ title: "Same Language", description: "Input and output languages are effectively the same. No translation performed." });
         
         setProcessingStep('synthesizing');
-        const synthesisResult = await synthesizeEmotionalSpeech({
-          text: transcriptionResult.transcription,
-          language: actualSourceLanguage,
-          emotion: 'neutral',
-        });
-        setLatestSynthesizedAudioDataUri(synthesisResult.audioDataUri);
-        console.log("Synthesized Audio Data URI:", synthesisResult.audioDataUri);
-        entry.synthesizedAudioUri = synthesisResult.audioDataUri;
-        toast({ title: "Speech Synthesized", description: "Successfully synthesized original text to speech." });
-        if (synthesisResult.audioDataUri) await playAudio(synthesisResult.audioDataUri);
-
+        try {
+          const synthesisResult = await synthesizeEmotionalSpeech({
+            text: transcriptionResult.transcription,
+            language: actualSourceLanguage,
+            emotion: 'neutral',
+          });
+          setLatestSynthesizedAudioDataUri(synthesisResult.audioDataUri);
+          console.log("Synthesized Audio Data URI:", synthesisResult.audioDataUri);
+          entry.synthesizedAudioUri = synthesisResult.audioDataUri;
+          toast({ title: "Speech Synthesized", description: "Successfully synthesized original text to speech." });
+          if (synthesisResult.audioDataUri) await playAudio(synthesisResult.audioDataUri);
+        } catch (synthError) {
+          console.error("Synthesis error:", synthError);
+          toast({ variant: "destructive", title: "Synthesis Error", description: synthError instanceof Error ? synthError.message : String(synthError) });
+          setCurrentError(`Synthesis error: ${synthError instanceof Error ? synthError.message : String(synthError)}`);
+        }
       } else {
         setProcessingStep('translating');
-        const translationResult = await translateRealTime({
-          text: transcriptionResult.transcription,
-          sourceLanguage: actualSourceLanguage,
-          targetLanguage: actualTargetLanguage,
-        });
-        if (!translationResult || typeof translationResult.translation !== 'string') {
-          throw new Error("Translation result was invalid or missing.");
+        try {
+          const translationResult = await translateRealTime({
+            text: transcriptionResult.transcription,
+            sourceLanguage: actualSourceLanguage,
+            targetLanguage: actualTargetLanguage,
+          });
+          if (!translationResult || typeof translationResult.translation !== 'string') {
+            throw new Error("Translation result was invalid or missing.");
+          }
+          setLatestTranslatedText(translationResult.translation);
+          entry.translatedText = translationResult.translation;
+          toast({ title: "Text Translated", description: `"${translationResult.translation}"` });
+        } catch (translationError) {
+          console.error("Translation error:", translationError);
+          toast({ variant: "destructive", title: "Translation Error", description: translationError instanceof Error ? translationError.message : String(translationError) });
+          setCurrentError(`Translation error: ${translationError instanceof Error ? translationError.message : String(translationError)}`);
+          setProcessingStep(null);
+          setConversationLog(prev => [...prev, entry as ConversationEntry]);
+          return;
         }
-        setLatestTranslatedText(translationResult.translation);
-        entry.translatedText = translationResult.translation;
-        toast({ title: "Text Translated", description: `"${translationResult.translation}"` });
-
         setProcessingStep('synthesizing');
-        const synthesisResult = await synthesizeEmotionalSpeech({
-          text: translationResult.translation,
-          language: actualTargetLanguage,
-          emotion: 'neutral', 
-        });
-        if (!synthesisResult || typeof synthesisResult.audioDataUri !== 'string') {
-          throw new Error("Speech synthesis result was invalid or missing.");
+        try {
+          const synthesisResult = await synthesizeEmotionalSpeech({
+            text: translationResult.translation,
+            language: actualTargetLanguage,
+            emotion: 'neutral', 
+          });
+          if (!synthesisResult || typeof synthesisResult.audioDataUri !== 'string') {
+            throw new Error("Speech synthesis result was invalid or missing.");
+          }
+          setLatestSynthesizedAudioDataUri(synthesisResult.audioDataUri);
+          console.log("Synthesized Audio Data URI:", synthesisResult.audioDataUri);
+          entry.synthesizedAudioUri = synthesisResult.audioDataUri;
+          toast({ title: "Speech Synthesized", description: "Successfully synthesized translated text to speech." });
+          if (synthesisResult.audioDataUri) await playAudio(synthesisResult.audioDataUri);
+        } catch (synthError) {
+          console.error("Synthesis error:", synthError);
+          toast({ variant: "destructive", title: "Synthesis Error", description: synthError instanceof Error ? synthError.message : String(synthError) });
+          setCurrentError(`Synthesis error: ${synthError instanceof Error ? synthError.message : String(synthError)}`);
         }
-        setLatestSynthesizedAudioDataUri(synthesisResult.audioDataUri);
-        console.log("Synthesized Audio Data URI:", synthesisResult.audioDataUri);
-        entry.synthesizedAudioUri = synthesisResult.audioDataUri;
-        toast({ title: "Speech Synthesized", description: "Successfully synthesized translated text to speech." });
-        if (synthesisResult.audioDataUri) await playAudio(synthesisResult.audioDataUri);
       }
 
     } catch (err) {
