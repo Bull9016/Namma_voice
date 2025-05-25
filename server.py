@@ -12,8 +12,8 @@ CORS(app)
 
 logging.basicConfig(level=logging.DEBUG)
 
-# Initialize TTS model (using a small pre-trained model for demonstration)
-tts_model_name = "tts_models/en/ljspeech/tacotron2-DDC"
+# Initialize TTS model with a lighter model for lower resource usage
+tts_model_name = "tts_models/en/ljspeech/glow-tts"  # Lighter model
 tts = TTS(tts_model_name)
 
 # Simple in-memory cache for synthesized audio
