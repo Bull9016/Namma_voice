@@ -34,13 +34,23 @@ export async function synthesizeEmotionalSpeech(input: SynthesizeEmotionalSpeech
     });
 
     if (!response.ok) {
-      throw new Error(`Backend synthesis request failed with status ${response.status}`);
+      const errorText = await response.text();
+      const error = new Error(`Backend synthesis request failed with status ${response.status}: ${errorText}`);
+      // Attach digest if available
+      if (response.headers.has('x-error-digest')) {
+        (error as any).digest = response.headers.get('x-error-digest');
+      }
+      throw error;
     }
 
     const data = await response.json();
 
     if (!data.audio_base64) {
-      throw new Error('Backend synthesis response missing audio_base64');
+      const error = new Error('Backend synthesis response missing audio_base64');
+      if (response.headers.has('x-error-digest')) {
+        (error as any).digest = response.headers.get('x-error-digest');
+      }
+      throw error;
     }
 
     return {
@@ -48,6 +58,15 @@ export async function synthesizeEmotionalSpeech(input: SynthesizeEmotionalSpeech
     };
   } catch (error) {
     console.error('Error in synthesizeEmotionalSpeech:', error);
+    // Re-throw error with digest if available
+    if (error instanceof Error && !(error as any).digest && error.message.includes('digest')) {
+      try {
+        const digestMatch = error.message.match(/digest: (.+)$/i);
+        if (digestMatch) {
+          (error as any).digest = digestMatch[1];
+        }
+      } catch {}
+    }
     throw error;
   }
 }
