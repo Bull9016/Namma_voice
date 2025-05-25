@@ -3,15 +3,11 @@ import io
 import base64
 from gtts import gTTS
 from flask_cors import CORS
-import logging
 import traceback
 
 app = Flask(__name__)
 app.debug = True  # Enable debug mode for detailed error logs
 CORS(app)  # Enable CORS for all routes
-
-# Setup logging to file
-logging.basicConfig(filename='server_error.log', level=logging.ERROR, format='%(asctime)s %(levelname)s %(message)s')
 
 def text_to_speech_bytes(text, lang='en'):
     tts = gTTS(text=text, lang=lang)
@@ -40,7 +36,7 @@ def synthesize():
     except Exception as e:
         error_message = str(e)
         traceback_str = traceback.format_exc()
-        app.logger.error(f"Error in /synthesize: {error_message}\n{traceback_str}")
+        print(f"Error in /synthesize: {error_message}\n{traceback_str}")
         response = jsonify({'error': error_message})
         response.status_code = 500
         response.headers['x-error-digest'] = error_message
