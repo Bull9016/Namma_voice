@@ -207,7 +207,7 @@ export function ConversationUI() {
         setProcessingStep('synthesizing');
         try {
           const synthesisResult = await synthesizeEmotionalSpeech({
-            text: translationResult.translation,
+            text: translationResult?.translation || '',
             language: actualTargetLanguage,
             emotion: 'neutral', 
           });
