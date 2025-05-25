@@ -7,15 +7,31 @@ import traceback
 import os
 import logging
 import time
+import threading
 
 app = Flask(__name__)
 CORS(app)
 
-# Configure logging to show detailed error info on CLI
 logging.basicConfig(level=logging.DEBUG)
 
 # Simple in-memory cache for synthesized audio
 synthesis_cache = {}
+
+# Rate limiting parameters
+MAX_REQUESTS_PER_MINUTE = 10
+request_timestamps = []
+lock = threading.Lock()
+
+def is_rate_limited():
+    with lock:
+        current_time = time.time()
+        # Remove timestamps older than 60 seconds
+        while request_timestamps and request_timestamps[0] <= current_time - 60:
+            request_timestamps.pop(0)
+        if len(request_timestamps) >= MAX_REQUESTS_PER_MINUTE:
+            return True
+        request_timestamps.append(current_time)
+        return False
 
 def synthesize_text_to_speech(text, lang):
     cache_key = f"{lang}:{text}"
@@ -23,11 +39,16 @@ def synthesize_text_to_speech(text, lang):
         app.logger.debug("Cache hit for synthesis")
         return synthesis_cache[cache_key]
 
-    max_retries = 3
-    backoff_factor = 2
-    delay = 1  # initial delay in seconds
+    max_retries = 5
+    backoff_factor = 3
+    delay = 2  # initial delay in seconds
 
     for attempt in range(max_retries):
+        if is_rate_limited():
+            app.logger.warning("Rate limit exceeded, delaying synthesis")
+            time.sleep(delay)
+            delay *= backoff_factor
+            continue
         try:
             tts = gTTS(text=text, lang=lang)
             audio_fp = io.BytesIO()
