@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -208,24 +207,25 @@ export function ConversationUI() {
       }
 
     } catch (err) {
-      console.error("Processing error:", err); 
-      
+      console.error("Processing error:", err);
       const errObject = err as any;
-      let extractedMessage: string;
+      let extractedMessage: string = "An unknown error occurred during processing.";
+      let digestInfo = "";
 
       if (errObject instanceof Error) {
         extractedMessage = errObject.message;
+        if ('digest' in errObject) {
+          digestInfo = ` Digest: ${JSON.stringify((errObject as any).digest)}`;
+        }
       } else if (typeof errObject === 'string' && errObject) {
         extractedMessage = errObject;
       } else if (errObject && typeof errObject === 'object') {
         if (typeof errObject.message === 'string' && errObject.message) {
           extractedMessage = errObject.message;
         } else if (typeof errObject.details === 'string' && errObject.details) {
-          // Common in Google API errors
           extractedMessage = errObject.details;
         } else {
           try {
-            // Check for common event properties if it looks like an event
             if (typeof errObject.type === 'string' && typeof errObject.isTrusted === 'boolean') {
                 extractedMessage = `An event of type '${errObject.type}' occurred.`;
             } else {
@@ -236,12 +236,10 @@ export function ConversationUI() {
             extractedMessage = "An error object was received, but it could not be stringified.";
           }
         }
-      } else {
-        extractedMessage = "An unknown error occurred during processing.";
       }
       
-      setCurrentError(`Error during ${processingStep || 'processing'}: ${extractedMessage}`);
-      toast({ variant: "destructive", title: "Processing Error", description: extractedMessage });
+      setCurrentError(`Error during ${processingStep || 'processing'}: ${extractedMessage}${digestInfo}`);
+      toast({ variant: "destructive", title: "Processing Error", description: `${extractedMessage}${digestInfo}` });
       
       entry.translatedText = entry.translatedText || (entry.originalText ? `Error processing "${entry.originalText}"` : `Error: ${extractedMessage}`);
     } finally {
@@ -258,7 +256,6 @@ export function ConversationUI() {
 
   const playAudio = (audioDataUri: string): Promise<void> => {
     return new Promise((resolve, reject) => {
-      // Validate audioDataUri format before playing
       const audioDataUriPattern = /^data:audio\/(wav|mpeg|mp3|ogg|webm);base64,[A-Za-z0-9+/=]+$/;
       if (!audioDataUri || audioDataUri === 'data:,' || !audioDataUriPattern.test(audioDataUri)) {
         toast({ variant: "destructive", title: "Invalid Audio Source", description: "The audio source is invalid or unsupported." });
@@ -275,7 +272,6 @@ export function ConversationUI() {
           let errorMessage = "Could not play synthesized audio.";
           const audioElement = event?.target as HTMLAudioElement | undefined;
           if (audioElement && audioElement.error) {
-            // MediaError codes: 1=MEDIA_ERR_ABORTED, 2=MEDIA_ERR_NETWORK, 3=MEDIA_ERR_DECODE, 4=MEDIA_ERR_SRC_NOT_SUPPORTED
             switch (audioElement.error.code) {
               case 1: 
                 errorMessage = "Audio playback aborted.";
