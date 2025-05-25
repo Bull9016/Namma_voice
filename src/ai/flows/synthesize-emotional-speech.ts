@@ -1,72 +1,39 @@
-'use server';
-import { z } from 'genkit';
+import axios from 'axios';
 
-const SynthesizeEmotionalSpeechInputSchema = z.object({
-  text: z.string().describe('The text to be synthesized into speech.'),
-  language: z.enum(['en', 'kn', 'hi']).describe('The language of the text (en: English, kn: Kannada, hi: Hindi).'),
-  emotion: z.string().describe('The desired emotion to be conveyed in the speech synthesis.'),
-});
-export type SynthesizeEmotionalSpeechInput = z.infer<typeof SynthesizeEmotionalSpeechInputSchema>;
+interface SynthesizeEmotionalSpeechParams {
+  text: string;
+  language: string;
+  emotion: string; // Currently unused, but can be extended for emotion-based synthesis
+}
 
-const SynthesizeEmotionalSpeechOutputSchema = z.object({
-  audioDataUri: z.string().describe(
-    'The audio data URI of the synthesized speech, including MIME type and Base64 encoding (e.g., data:audio/wav;base64,...).'
-  ),
-});
-export type SynthesizeEmotionalSpeechOutput = z.infer<typeof SynthesizeEmotionalSpeechOutputSchema>;
+interface SynthesizeEmotionalSpeechResult {
+  audioDataUri: string;
+}
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-
-export async function synthesizeEmotionalSpeech(input: SynthesizeEmotionalSpeechInput): Promise<SynthesizeEmotionalSpeechOutput> {
-  const { text, language } = input;
+export async function synthesizeEmotionalSpeech(params: SynthesizeEmotionalSpeechParams): Promise<SynthesizeEmotionalSpeechResult> {
+  const { text, language } = params;
 
   try {
-    const response = await fetch(`${BACKEND_URL}/synthesize`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        text,
-        lang: language,
-        response_type: 'base64'
-      })
+    const response = await axios.post('http://localhost:10000/synthesize', {
+      text,
+      lang: language,
+      response_type: 'base64',
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      const error = new Error(`Backend synthesis request failed with status ${response.status}: ${errorText}`);
-      // Attach digest if available
-      if (response.headers.has('x-error-digest')) {
-        (error as any).digest = response.headers.get('x-error-digest');
-      }
-      throw error;
+    if (response.status !== 200) {
+      throw new Error(`Synthesis API returned status ${response.status}`);
     }
 
-    const data = await response.json();
-
+    const data = response.data;
     if (!data.audio_base64) {
-      const error = new Error('Backend synthesis response missing audio_base64');
-      if (response.headers.has('x-error-digest')) {
-        (error as any).digest = response.headers.get('x-error-digest');
-      }
-      throw error;
+      throw new Error('Synthesis API response missing audio_base64');
     }
 
     return {
-      audioDataUri: data.audio_base64
+      audioDataUri: data.audio_base64,
     };
   } catch (error) {
-    console.error('Error in synthesizeEmotionalSpeech:', error);
-    // Re-throw error with digest if available
-    if (error instanceof Error && !(error as any).digest && error.message.includes('digest')) {
-      try {
-        const digestMatch = error.message.match(/digest: (.+)$/i);
-        if (digestMatch) {
-          (error as any).digest = digestMatch[1];
-        }
-      } catch {}
-    }
+    console.error('Error calling synthesis API:', error);
     throw error;
   }
 }
