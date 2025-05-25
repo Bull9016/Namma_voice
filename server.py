@@ -5,6 +5,7 @@ from gtts import gTTS
 from flask_cors import CORS
 
 app = Flask(__name__)
+app.debug = True  # Enable debug mode for detailed error logs
 CORS(app)  # Enable CORS for all routes
 
 def text_to_speech_bytes(text, lang='en'):
@@ -45,4 +46,4 @@ import os
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
