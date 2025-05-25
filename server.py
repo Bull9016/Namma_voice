@@ -1,37 +1,23 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from gtts import gTTS
 import base64
 import io
-import traceback
 import os
 import logging
-import time
-import threading
+import pyttsx3
+import tempfile
 
 app = Flask(__name__)
 CORS(app)
 
 logging.basicConfig(level=logging.DEBUG)
 
+# Initialize pyttsx3 engine
+engine = pyttsx3.init()
+engine.setProperty('rate', 150)  # Set speech rate
+
 # Simple in-memory cache for synthesized audio
 synthesis_cache = {}
-
-# Rate limiting parameters
-MAX_REQUESTS_PER_MINUTE = 10
-request_timestamps = []
-lock = threading.Lock()
-
-def is_rate_limited():
-    with lock:
-        current_time = time.time()
-        # Remove timestamps older than 60 seconds
-        while request_timestamps and request_timestamps[0] <= current_time - 60:
-            request_timestamps.pop(0)
-        if len(request_timestamps) >= MAX_REQUESTS_PER_MINUTE:
-            return True
-        request_timestamps.append(current_time)
-        return False
 
 def synthesize_text_to_speech(text, lang):
     cache_key = f"{lang}:{text}"
@@ -39,32 +25,29 @@ def synthesize_text_to_speech(text, lang):
         app.logger.debug("Cache hit for synthesis")
         return synthesis_cache[cache_key]
 
-    max_retries = 5
-    backoff_factor = 3
-    delay = 2  # initial delay in seconds
+    try:
+        # Use pyttsx3 to synthesize speech to a temporary WAV file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmpfile:
+            temp_filename = tmpfile.name
 
-    for attempt in range(max_retries):
-        if is_rate_limited():
-            app.logger.warning("Rate limit exceeded, delaying synthesis")
-            time.sleep(delay)
-            delay *= backoff_factor
-            continue
-        try:
-            tts = gTTS(text=text, lang=lang)
-            audio_fp = io.BytesIO()
-            tts.write_to_fp(audio_fp)
-            audio_fp.seek(0)
-            audio_base64 = base64.b64encode(audio_fp.read()).decode('utf-8')
-            synthesis_cache[cache_key] = audio_base64
-            app.logger.debug("Successfully synthesized audio to base64")
-            return audio_base64
-        except Exception as e:
-            app.logger.error(f"Synthesis attempt {attempt+1} failed: {e}", exc_info=True)
-            if attempt < max_retries - 1:
-                time.sleep(delay)
-                delay *= backoff_factor
-            else:
-                raise
+        engine.save_to_file(text, temp_filename)
+        engine.runAndWait()
+
+        # Read the WAV file and encode to base64
+        with open(temp_filename, 'rb') as f:
+            audio_data = f.read()
+        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+
+        synthesis_cache[cache_key] = audio_base64
+
+        # Clean up temp file
+        os.remove(temp_filename)
+
+        app.logger.debug("Successfully synthesized audio to base64")
+        return audio_base64
+    except Exception as e:
+        app.logger.error(f"Synthesis failed: {e}", exc_info=True)
+        raise
 
 @app.route('/synthesize', methods=['POST'])
 def synthesize():
@@ -82,7 +65,7 @@ def synthesize():
         audio_base64 = synthesize_text_to_speech(text, lang)
 
         if response_type == 'base64':
-            return jsonify({'audio_base64': f'data:audio/mp3;base64,{audio_base64}'})
+            return jsonify({'audio_base64': f'data:audio/wav;base64,{audio_base64}'})
         else:
             app.logger.error(f"Unsupported response_type: {response_type}")
             return jsonify({'error': 'Unsupported response_type'}), 400
