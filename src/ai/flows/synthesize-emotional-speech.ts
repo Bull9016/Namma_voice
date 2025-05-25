@@ -10,7 +10,7 @@ interface SynthesizeEmotionalSpeechResult {
   audioDataUri: string;
 }
 
-const BACKEND_URL = process.env.NODE_ENV === 'development' ? 'https://nammavoicebackend.onrender.com';
+const BACKEND_URL = 'https://nammavoicebackend.onrender.com';
 
 export async function synthesizeEmotionalSpeech(params: SynthesizeEmotionalSpeechParams): Promise<SynthesizeEmotionalSpeechResult> {
   const { text, language } = params;
