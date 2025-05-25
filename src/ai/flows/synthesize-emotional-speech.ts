@@ -15,38 +15,39 @@ const SynthesizeEmotionalSpeechOutputSchema = z.object({
 });
 export type SynthesizeEmotionalSpeechOutput = z.infer<typeof SynthesizeEmotionalSpeechOutputSchema>;
 
-<<<<<<< HEAD
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-=======
-const BACKEND_URL = process.env.BACKEND_URL || 'https://namma-voice-1.onrender.com';
->>>>>>> 2124eddb887f775b0f4cf58fc40a83ba65b8c322
 
 export async function synthesizeEmotionalSpeech(input: SynthesizeEmotionalSpeechInput): Promise<SynthesizeEmotionalSpeechOutput> {
   const { text, language } = input;
 
-  const response = await fetch(`${BACKEND_URL}/synthesize`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      text,
-      lang: language,
-      response_type: 'base64'
-    })
-  });
+  try {
+    const response = await fetch(`${BACKEND_URL}/synthesize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text,
+        lang: language,
+        response_type: 'base64'
+      })
+    });
 
-  if (!response.ok) {
-    throw new Error(`Backend synthesis request failed with status ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`Backend synthesis request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.audio_base64) {
+      throw new Error('Backend synthesis response missing audio_base64');
+    }
+
+    return {
+      audioDataUri: data.audio_base64
+    };
+  } catch (error) {
+    console.error('Error in synthesizeEmotionalSpeech:', error);
+    throw error;
   }
-
-  const data = await response.json();
-
-  if (!data.audio_base64) {
-    throw new Error('Backend synthesis response missing audio_base64');
-  }
-
-  return {
-    audioDataUri: data.audio_base64
-  };
 }
