@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 services:
   - type: web
     name: namma-voice-backend
@@ -20,3 +21,27 @@ services:
     startCommand: npm start
     autoDeploy: true
     branch: main
+=======
+services:
+  - type: web
+    name: namma-voice-backend
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: python server.py
+    envVars:
+      - key: PORT
+        value: "10000"  # Render will override this with its own port
+    autoDeploy: true
+    branch: main
+
+  - type: web
+    name: namma-voice-frontend
+    env: node
+    plan: free
+    rootDir: Namma_voice
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    autoDeploy: true
+    branch: main
+>>>>>>> 2da29be6e658670ebab2efb53a2122966c7c3de7
