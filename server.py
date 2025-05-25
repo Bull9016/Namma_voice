@@ -32,7 +32,6 @@ def synthesize():
         else:
             return send_file(mp3_fp, mimetype='audio/mpeg', as_attachment=True, download_name='output.mp3')
     except Exception as e:
-        # Log the error and return JSON with error and digest header
         import traceback
         error_message = str(e)
         traceback_str = traceback.format_exc()
