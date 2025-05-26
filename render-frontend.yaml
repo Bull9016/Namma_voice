@@ -7,4 +7,4 @@ services:
     startCommand: npm start
     envVars:
       - key: NEXT_PUBLIC_API_BASE_URL
-        value: "https://your-backend-service.onrender.com"
+        value: "https://nammavoicebackend.onrender.com"
