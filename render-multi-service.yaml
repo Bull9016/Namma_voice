@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: namma-voice-backend
+    name: NammaVoiceBackend
     env: node
     plan: free
     buildCommand: npm install && npm run build
@@ -10,11 +10,11 @@ services:
         fromDatabase: true
 
   - type: web
-    name: namma-voice-frontend
+    name: Nammavoice
     env: node
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NEXT_PUBLIC_API_BASE_URL
-        value: "https://namma-voice-backend.onrender.com"
+        value: "https://nammavoicebackend.onrender.com"
