@@ -8,49 +8,34 @@ interface SynthesizeEmotionalSpeechResult {
   audioDataUri: string;
 }
 
-const GOOGLE_CLOUD_TTS_API_KEY = 'YOUR_GOOGLE_CLOUD_API_KEY'; // Replace with your actual API key
-
 export async function synthesizeEmotionalSpeech(params: SynthesizeEmotionalSpeechParams): Promise<SynthesizeEmotionalSpeechResult> {
   const { text, language } = params;
 
   try {
-    const response = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_CLOUD_TTS_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          input: { text },
-          voice: {
-            languageCode: language,
-            ssmlGender: 'NEUTRAL',
-          },
-          audioConfig: {
-            audioEncoding: 'MP3',
-          },
-        }),
-      }
-    );
+    const response = await fetch('/api/synthesize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text, lang: language }),
+    });
 
     if (!response.ok) {
-      throw new Error(`Google Cloud TTS API error: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
 
-    if (!data.audioContent) {
-      throw new Error('No audio content received from Google Cloud TTS API');
+    if (!data.audioDataUri) {
+      throw new Error('No audioDataUri received from API');
     }
 
-    const audioDataUri = `data:audio/mp3;base64,${data.audioContent}`;
-
     return {
-      audioDataUri,
+      audioDataUri: data.audioDataUri,
     };
   } catch (error) {
-    console.error('Error synthesizing speech with Google Cloud TTS API:', error);
+    console.error('Error synthesizing speech:', error);
     throw error;
   }
 }
