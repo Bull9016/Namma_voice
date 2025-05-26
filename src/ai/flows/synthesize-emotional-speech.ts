@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 interface SynthesizeEmotionalSpeechParams {
   text: string;
   language: string;
@@ -10,32 +8,49 @@ interface SynthesizeEmotionalSpeechResult {
   audioDataUri: string;
 }
 
-const BACKEND_URL = 'https://nammavoicebackend.onrender.com';
+const GOOGLE_CLOUD_TTS_API_KEY = 'YOUR_GOOGLE_CLOUD_API_KEY'; // Replace with your actual API key
 
 export async function synthesizeEmotionalSpeech(params: SynthesizeEmotionalSpeechParams): Promise<SynthesizeEmotionalSpeechResult> {
   const { text, language } = params;
 
   try {
-    const response = await axios.post(`${BACKEND_URL}/synthesize`, {
-      text,
-      lang: language,
-      response_type: 'base64',
-    });
+    const response = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_CLOUD_TTS_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: { text },
+          voice: {
+            languageCode: language,
+            ssmlGender: 'NEUTRAL',
+          },
+          audioConfig: {
+            audioEncoding: 'MP3',
+          },
+        }),
+      }
+    );
 
-    if (response.status !== 200) {
-      throw new Error(`Synthesis API returned status ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`Google Cloud TTS API error: ${response.statusText}`);
     }
 
-    const data = response.data;
-    if (!data.audio_base64) {
-      throw new Error('Synthesis API response missing audio_base64');
+    const data = await response.json();
+
+    if (!data.audioContent) {
+      throw new Error('No audio content received from Google Cloud TTS API');
     }
+
+    const audioDataUri = `data:audio/mp3;base64,${data.audioContent}`;
 
     return {
-      audioDataUri: data.audio_base64,
+      audioDataUri,
     };
   } catch (error) {
-    console.error('Error calling synthesis API:', error);
+    console.error('Error synthesizing speech with Google Cloud TTS API:', error);
     throw error;
   }
 }
