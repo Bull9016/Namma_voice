@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: namma-voice-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+        fromDatabase: true
+
+  - type: web
+    name: namma-voice-frontend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: "https://namma-voice-backend.onrender.com"
